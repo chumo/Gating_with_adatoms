@@ -200,7 +200,7 @@ def on_pick(event):
     vac_colors[vac_sizes > sizeUNFILLED] = 'w'
     vacs.set_facecolor(vac_colors)
 
-    plt.draw()
+    fig.canvas.draw()
     
 def on_mouse_move(event):
     try:
@@ -209,7 +209,7 @@ def on_mouse_move(event):
     except:
         potlabel.set_text('Local Potential: -')
         
-    plt.draw()
+    fig.canvas.draw()
 
 fig.canvas.mpl_connect('pick_event', on_pick)
 fig.canvas.mpl_connect('motion_notify_event', on_mouse_move)
