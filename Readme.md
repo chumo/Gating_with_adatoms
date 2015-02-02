@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/9647/chumo/Gating_with_adatoms.svg)](http://dx.doi.org/10.5281/zenodo.14781)
+
 Gating_with_adatoms
 ===================
 
