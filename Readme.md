@@ -3,16 +3,8 @@
 Gating_with_adatoms
 ===================
 
-This is a Python program to visualize the electrostatic potential 
+This is a program to visualize the electrostatic potential 
 induced by charged defects on surfaces, as they are placed by the user.
-
-The graphical user interface is a Matplotlib figure which is able to handle events
-like mouse clicks and mouse movements.
-
-It has been tested in Python 2.7.6 and Python 3.4.2.
-
-For the moment, the program deals only with the case of adatoms adsorbed on 
-the vacancy sites of the 2x2 reconstruction of the InAs(111)A semiconductor surface. 
 
 For a detailed explanation on the physics behind this, see the articles:
 
@@ -23,6 +15,24 @@ Yang, J.; Nacci, C.; Martínez-Blanco, J.; Kanisawa, K. & Fölsch, S.
 *Emergent multistability in assembled nanostructures*
 Yang, J.; Erwin, S.; Kanisawa, K.; Nacci, C. & Fölsch, S.
 [Nano Letters, 2011, 11, 2486](http://dx.doi.org/10.1021/nl2009444)
+
+This repo contains a Python version and an HTML version:
+
+### Python
+The graphical user interface is a Matplotlib figure which is able to handle events
+like mouse clicks and mouse movements.
+
+It has been tested in Python 2.7.6 and Python 3.4.2.
+
+For the moment, the program deals only with the case of adatoms adsorbed on 
+the vacancy sites of the 2x2 reconstruction of the InAs(111)A semiconductor surface. 
+
+### HTML
+This is a web-app where the interactivity has been implemented using the javascript visualization library d3.js.
+
+In this version it is possible to define a lattice of adsorption sites (two vectors, each with modulus and angle).
+
+A copy of two javascript libraries are used and included, namely [PNGlib.js](http://www.xarg.org/2010/03/generate-client-side-png-files-using-javascript/) and [Bessel.JS](https://github.com/SheetJS/bessel).
 
 Enjoy!
 Jesús Martínez-Blanco

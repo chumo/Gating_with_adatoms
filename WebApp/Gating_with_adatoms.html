@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Gating with atoms</title>
+	<script src="d3/d3.min.js"></script>
+	<script src="PNGlib/PNGlib.js"></script>
+	<script src="bessel-0.2.0/bessel.js"></script>
+	<style>
+		.axis path,
+		.axis line {
+    		fill: none;
+    		stroke: black;
+    		shape-rendering: crispEdges;
+		}
+
+		.axis text {
+    		font-family: sans-serif;
+    		font-size: 11px;
+		}
+
+		.axisLabel {
+			text-anchor: middle;
+			font-family: sans-serif;
+    		font-size: 14px;
+		}
+	
+		.vacancy {
+			fill: red;	
+			stroke: rgba(0,0,0,0); /* Make it transparent */
+			stroke-width: 6px; /* Make it big to be able to select it even when click is not exactly on the circle */	
+		}
+
+		.adatom {
+			fill: white;
+			stroke: black;
+			stroke-width: 1px;	
+		}
+
+		.profile {
+  			fill: none;
+  			stroke: blue;
+  			stroke-width: 1.5px;
+		}
+
+		form  { display: table; }
+		p     { display: table-row; }
+		label { display: table-cell; }
+		input { display: table-cell; }
+
+	</style>
+</head>
+<body style='text-align:center'>
+	<p align="left">chumo &copy 2015</p>
+	<h1 style='font-size:300%;font-family:Helvetica;'>Gating with atoms</h1>
+	<div align='center' style='font-size:100%;font-family:Helvetica;'>
+		Click an adsorption site (red dots) to place an atom.</br>Click an atom to remove it.</br>The charge of the atoms will modify the potential landscape.
+	</div>
+	
+	<script type="text/javascript">
+
+	var w = 750;
+	var h = 750;
+
+	var LSurf = 500; //lateral dimension of surface area
+	var LProf = 125; //lateral dimension of profile 
+
+	var lim = {
+		xmin: -100,
+		xmax: +100,
+		ymin: -100,
+		ymax: +100
+	};
+
+	var PD = 75; //padding from the border of svg container
+	var pd = 20; //padding between subplots
+
+	var Rvacancy = 2;
+	var Radatom = 8;
+
+	var numAdatoms = 0;
+		//Here is an alternative way of counting the number of Adatoms, that work only if circles have been created: 
+		//	var numAdatoms = d3.range(circles[0].length).filter(function(i){return circles[0][i].attributes.class.value=='adatom';}).length;
+
+	var svg = d3.select("body").append("svg").attr("width", w).attr("height", h).style('background','WhiteSmoke');
+
+	//scales
+	var xScale = d3.scale.linear()
+                    .range([PD, PD + LSurf])
+                    .domain([lim.xmin, lim.xmax]);
+
+    var yScale = d3.scale.linear()
+                    .range([pd + LProf + pd + LSurf, pd + LProf + pd])
+                    .domain([lim.ymin, lim.ymax]);
+
+	var yprofScale = d3.scale.linear()
+                    .range([pd + LProf, pd])
+                    .domain([-1, 1]);
+
+	var xprofScale = d3.scale.linear()
+                    .range([PD + LSurf + pd, PD + LSurf + pd + LProf])
+                    .domain([-1, 1]);
+
+	//axis                    
+    var xAxis = d3.svg.axis()
+                  .scale(xScale)
+                  .orient("bottom");
+
+	var yAxis = d3.svg.axis()
+                  .scale(yScale)
+                  .orient("left");
+
+    var xprofAxis = d3.svg.axis()
+                  .scale(xprofScale)
+                  .orient("bottom")
+                  .ticks(5);
+
+    var yprofAxis = d3.svg.axis()
+                  .scale(yprofScale)
+                  .orient("left")
+                  .ticks(5);
+
+	//add axis on groups
+	var disp_xAxis = svg.append("g")
+    	.attr("class", "axis")
+    	.attr("transform", "translate(" + 0 + "," + (pd + LProf + pd + LSurf) + ")")
+    	.call(xAxis);
+
+	var disp_yAxis = svg.append("g")
+    	.attr("class", "axis")
+    	.attr("transform", "translate(" + PD + "," + 0 + ")")
+    	.call(yAxis);
+
+	var disp_xprofAxis = svg.append("g")
+    	.attr("class", "axis")
+    	.attr("transform", "translate(" + 0 + "," + (pd + LProf + pd + LSurf) + ")")
+    	.call(xprofAxis);
+
+	var disp_yprofAxis = svg.append("g")
+    	.attr("class", "axis")
+    	.attr("transform", "translate(" + PD + "," + 0 + ")")
+    	.call(yprofAxis);
+
+    //add text label fo the axis
+    svg.append('text') //xAxis
+    	.attr('class','axisLabel')
+    	.attr('x',PD+LSurf/2)
+    	.attr('y',pd+LProf+pd+LSurf)
+    	.attr('dy',40)
+    	.text('X (Å)');
+
+	svg.append('text') //yAxis
+    	.attr('class','axisLabel')
+    	.attr('transform','rotate(-90)')
+    	.attr('y',PD)
+    	.attr('x',-(pd+LProf+pd+LSurf/2))
+    	.attr('dy',-40)
+    	.text('Y (Å)');
+
+	svg.append('text') //xprofAxis
+    	.attr('class','axisLabel')
+    	.attr('x',PD+LSurf+pd+LProf/2)
+    	.attr('y',pd+LProf+pd+LSurf)
+    	.attr('dy',40)
+    	.text('Potential @ X = 0');
+
+	svg.append('text') //yprofAxis
+    	.attr('class','axisLabel')
+    	.attr('transform','rotate(-90)')
+    	.attr('y',PD)
+    	.attr('x',-(pd+LProf/2))
+    	.attr('dy',-40)
+    	.text('Potential @ Y = 0');
+
+    //horizontal and vertical profiles
+		Hprofile = svg.append("path");
+		Vprofile = svg.append("path");
+
+    //add input panel
+    svg
+		.append('foreignObject')
+		.attr('id','inputPanel')
+		.style('background','silver')
+		.attr('x',PD + LSurf)
+		.attr('y',0)
+		.attr('width', w-PD-LSurf)
+		.attr('height', LProf+pd+pd)
+		.html('<div align="center" id="inputs" style="font-family:Palatino; font-size:18;"></div>');
+
+	var inputsString = [
+			'</br>',
+			'<strong style="font-size:20px;">Lattice:</strong>',
+			'<form name="inputForm">',
+			'<p><label align="right" for="a">a (&#8491;):</label><input type="text" id="a" value=8.57 size="5" onchange="update_adsites()">',
+			'<label align="right" for="alpha">&nbsp;&nbsp;&alpha; (º):</label><input type="text" id="alpha" value=0 size="3" onchange="update_adsites()"></p>',
+			'<p><label align="right" for="b">b (&#8491;):</label><input type="text" id="b" value=8.57 size="5" onchange="update_adsites()">',
+			'<label align="right" for="beta">&nbsp;&nbsp;&beta; (º):</label><input type="text" id="beta" value=60 size="3" onchange="update_adsites()"></p></br>',
+			'</form>',
+			'<strong style="font-size:20px;">Potential:</strong>',
+			'<p id="potText" style="font-size:20px;">Hover on graphs.</p>'
+   		].join('\n');
+
+	var inputs = d3.select('div#inputs');
+	inputs.html(inputsString);
+
+    //some functions
+    
+	function linspace(start, stop, nsteps){//Returns an array of values from start to stop in nsteps equally spaced intervals.
+  		var delta = (stop-start)/(nsteps-1);
+  		return d3.range(nsteps).map(function(i){return start+i*delta;});
+	};
+
+	function trapz(vecX,vecY){
+		var np = vecY.length;
+
+		var sums = d3.range(np-1).map(function(i){return 0.5 * (vecY[i+1]+vecY[i]) * Math.abs(vecX[i+1]-vecX[i]);}); 
+		return d3.sum(sums);
+	};
+
+	function Interpolator(vecX, vecY) {
+		this.vecX = vecX;
+		this.vecY = vecY;
+		this.np = vecX.length;
+		this.orde = orde;
+	};  
+
+	function orde(R) { //we assume that vecX is increasing monotonically.
+		var pivot = (this.vecX.filter(function(x){return x <= R})).length-1;
+		if (pivot == this.np-1) {
+			return this.vecY[pivot];
+		} else {
+			return this.vecY[pivot] + (this.vecY[pivot+1] - this.vecY[pivot])*(R - this.vecX[pivot])/(this.vecX[pivot+1] - this.vecX[pivot]);
+		};
+	};  
+
+	function Charged_Defect(charge,tsd,kappa,redmass,infinity) {
+	  this.charge = charge; //idem (+1 in our case)
+	  this.tsd = tsd; //tip sample distance (in Angstroms)
+	  this.kappa = kappa; //average static dielectric constant (8.075 for InAs)
+	  this.redmass = redmass; //reduced mass (0.043 in our case)
+	  this.infinity = infinity; // a positive value. I try first with 1, then with 2, then with 3... until I don't see significant changes in the resulting potential. Actually, a value of 1 is already enough.
+
+	  this.tsd_AU = this.tsd / 0.529177;
+	  this.distance = linspace(0,300,50);
+  
+	  this.pot_function = pot_function;
+	  this.potential = potential;
+
+	  pot_array=[];
+	  for (var i = 0; i < this.distance.length; i++) {
+	  	pot_array.push(this.pot_function(this.distance[i]));
+	  };
+	  this.pot_array = pot_array;
+	};
+
+	function pot_function(R) {//Returns the electrostatic potential (in mV) as measured at a distance of R Angstroms.
+        //Performs the full computation for every value of R.
+        
+        //var r = R.map(function(x){return x/0.529177;};
+      	var r = R/0.529177;
+
+        var potk_x = linspace(0,this.infinity,10000);
+        
+ 		
+ 		var c = this.charge;
+ 		var k = this.kappa;
+ 		var t = this.tsd_AU;
+ 		var s = 2 * this.redmass/k;
+
+        var potk = d3.range(potk_x.length).map(function(i){
+        	return (c/k)*(potk_x[i]/(potk_x[i]+s))*besselj(potk_x[i]*r,0)*Math.exp(-potk_x[i]*t);
+        });
+         
+        var area = trapz(potk_x,potk);
+
+        return area*27.211384*1000;
+	};
+
+	function potential(R) {//Returns the electrostatic potential (in mV) as measured at a distance of R Angstroms.
+        //The calculation is done by interpolating the values already computed and stored in self.pot_array.
+        
+        var f = new Interpolator(this.distance,this.pot_array);
+        
+        return f.orde(R);
+	};
+
+	var CD = new Charged_Defect(1., 5., 8.075, 0.043, 2.);
+
+    ////////////////////////
+
+    function arr2png(arr2D){ //returns a grayscale png string from a 2D array, using PNGlib.js
+    	var rows = arr2D.length
+    	var columns = arr2D[0].length
+    	var p = new PNGlib(rows, columns, 256); // construcor takes height, weight and color-depth
+		var background = p.color(0, 0, 0, 0); // set the background transparent
+
+		var min = d3.min(arr2D.map(function(d){return d3.min(d)}));
+		var max = d3.max(arr2D.map(function(d){return d3.max(d)}));
+
+		var gray = d3.scale.linear().domain([min,max]).range([0,255]);
+
+		for (var i = 0; i < rows; i++) {
+			for (var j = 0; j < columns; j++) {
+				grayvalue = gray(arr2D[i][j]);
+				p.buffer[p.index(i, j)] = p.color(grayvalue,grayvalue,grayvalue);
+			};
+		};
+
+    	return p.getBase64()
+    };
+
+    function Gen_pmap(){
+		pmap = Array(100); //matrix holding the potential values, created with 0 values
+		for (var i = 0; i < 100; i++) {pmap[i]=Array(100)};
+		for (var i = 0; i < 100; i++) {
+			for (var j = 0; j < 100; j++) {
+				pmap[i][j] = 0;
+			};
+		};
+
+		//scales that depend on pmap
+		x2i = d3.scale.linear()
+               	.rangeRound([0,pmap.length-1])
+                .domain([lim.xmin, lim.xmax]);
+
+        y2j = d3.scale.linear()
+                .rangeRound([0,pmap[0].length-1])
+                .domain([lim.ymax, lim.ymin]);
+
+        //update profiles as well
+        update_profiles();
+
+    };
+
+	function update_pmap(coord,adatom){
+        for (var i = 0; i < pmap.length; i++) {
+        	for (var j = 0; j < pmap[0].length; j++) {
+        		var dist = Math.sqrt(Math.pow(x2i.invert(i)-coord.x,2)+Math.pow(y2j.invert(j)-coord.y,2));
+        		if (adatom) {
+        			//pmap[i][j]+= gaussian(dist);
+        			pmap[i][j]+= CD.potential(dist);
+        		} else {
+					//pmap[i][j]-= gaussian(dist);
+					pmap[i][j]-= CD.potential(dist);
+        		};
+        	};
+        };
+
+        //if no adatoms, reset pmap to zero to avoid truncation error noise
+        if (numAdatoms == 0) {Gen_pmap();};
+
+        //update profiles as well
+        update_profiles();
+	};	
+
+	function update_profiles(){
+		//update profiles scales
+		var Hpmap = d3.range(pmap[0].length).map(function(i){return pmap[i][y2j(0)];});
+		var Vpmap = d3.range(pmap.length).map(function(i){return pmap[x2i(0)][i];});
+
+		//if no adatoms, scale the profile axes from -1 to 1 to have the profile line (which is all zero) in the middle
+        if (numAdatoms == 0) {
+        	yprofScale.domain([-1,1]);
+			xprofScale.domain([-1,1]);
+        } else {
+        	yprofScale.domain([d3.min(Hpmap),d3.max(Hpmap)]);
+			xprofScale.domain([d3.min(Vpmap),d3.max(Vpmap)]);
+        };
+
+		//update profiles tick labels
+		//xprofAxis.scale(xprofScale);
+		//yprofAxis.scale(yprofScale);
+		disp_xprofAxis.transition().call(xprofAxis);
+		disp_yprofAxis.transition().call(yprofAxis);
+
+  		var Hline = d3.svg.line()
+  			.x(function(d) { return xScale(d[0]); })
+    		.y(function(d) { return yprofScale(d[1]); });
+
+    	var Vline = d3.svg.line()
+  			.y(function(d) { return yScale(d[0]); })
+    		.x(function(d) { return xprofScale(d[1]); });
+
+		Hprofile
+    		.datum(d3.range(pmap[0].length).map(function(i) { return [x2i.invert(i), Hpmap[i]]; }))
+    		.transition()
+    		.attr("class", "profile")
+    		.attr("d", Hline);
+
+		Vprofile
+    		.datum(d3.range(pmap.length).map(function(i) { return [y2j.invert(i), Vpmap[i]]; }))
+    		.transition()
+    		.attr("class", "profile")
+    		.attr("d", Vline);	
+
+	};
+
+	function gaussian(x){
+		return 10*Math.exp(-Math.pow(x/20,2));
+	};
+
+	//generate pmap
+	Gen_pmap();
+	
+    //surface potential image
+    var surfImage = svg.append('image')
+    		.attr('x',PD)
+    		.attr('y',pd + LProf + pd)
+    		.attr('width',LSurf)
+    		.attr('height',LSurf)
+    		.attr('id','surfImage')
+    		.attr('alt',"Surface Potential");
+
+  	surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+
+  	//horizontal and vertical lines
+  	svg.append('line')
+  		.attr('x1',xScale(lim.xmin))
+  		.attr('x2',xScale(lim.xmax))
+  		.attr('y1',yScale(0))
+  		.attr('y2',yScale(0))
+  		.style('stroke','silver')
+  		.style('stroke-width','2');
+
+	svg.append('line')
+  		.attr('x1',xScale(0))
+  		.attr('x2',xScale(0))
+  		.attr('y1',yScale(lim.ymin))
+  		.attr('y2',yScale(lim.ymax))
+  		.style('stroke','silver')
+  		.style('stroke-width','2');
+  		  		
+
+    //meshgrid of adsorption sites
+    function Gen_adsites(){
+    	var a = eval(inputForm.a.value); // Size of the first unit vector
+		var b = eval(inputForm.b.value); // Size of the second unit vector
+		var alpha = eval(inputForm.alpha.value); // Angle of the first unit vector in degrees
+		var beta = eval(inputForm.beta.value); // Angle of the second unit vector in degrees
+		alpha *= Math.PI / 180;
+		beta *= Math.PI / 180;
+
+		adsites=[];
+    	for (var i = -100; i < 100 ; i++) { //i and j loop sufficiently large 
+    		for (var j = -100; j < 100 ; j++) {
+    			adsites.push([i * a * Math.cos(alpha) + j * b * Math.cos(beta), i * a * Math.sin(alpha) + j * b * Math.sin(beta)]);
+    		};
+    	};
+    	var rpad = 0//(Radatom+1)/2
+		adsites = adsites.filter(function(d){return d[0] > lim.xmin+rpad && d[0] < lim.xmax-rpad && d[1] > lim.ymin+rpad && d[1] < lim.ymax-rpad});
+    };
+
+	//add circles at adsorption sites	
+	function update_adsites(){
+		numAdatoms = 0;
+
+		Gen_pmap(); //resets pmap to zeros
+		surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+
+		Gen_adsites(); //generate adsites data set
+		
+		//join data
+		circles = svg.selectAll('circle').data(adsites);
+
+		//update
+		circles
+			.attr('class','vacancy')
+			.attr('r',Rvacancy)
+			.transition()
+			.attr('cx',function(d){return xScale(d[0])})
+    		.attr('cy',function(d){return yScale(d[1])});
+
+    	//enter
+    	circles
+    		.enter()
+    		.append('circle')
+    		.attr('class','vacancy')
+    		.attr('r',Rvacancy)
+    		.transition()
+    		.attr('cx',function(d){return xScale(d[0])})
+    		.attr('cy',function(d){return yScale(d[1])});
+
+    	//exit
+    	circles
+    		.exit()
+    		.remove();
+
+	};
+
+	//update adsites positions with the adsites dataset default values
+	update_adsites();
+
+	//update potential image when the set of adatoms is modified
+    circles.on('click',function(){
+    	var mycircle = d3.select(this);
+    	var cls = mycircle.attr('class');
+    	var x = xScale.invert(mycircle.attr('cx'));
+    	var y = yScale.invert(mycircle.attr('cy'));
+    	
+    	var coord = {x:x, y:y};
+    
+    	if (cls == 'adatom') {
+    		numAdatoms -= 1;
+    		mycircle.attr('r',Rvacancy).attr('class','vacancy');
+    		update_pmap(coord,false);
+    	} else {
+    		numAdatoms += 1;
+    		mycircle.attr('r',Radatom).attr('class','adatom');
+    		update_pmap(coord,true);
+    	};
+
+    	surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+
+    });
+
+    //mouse event to display potential value
+    svg.on('mousemove',function(){
+    	var mx= d3.mouse(this)[0];
+        var my= d3.mouse(this)[1];
+
+        var potText = d3.select('p#potText').style('color','black');
+        var text = 'Hover on graphs.';
+
+        //surface area
+        if (mx > PD && mx < (PD+LSurf) && my > (pd+LProf+pd) && my < (pd+LProf+pd+LSurf)) {
+        	var i = x2i(xScale.invert(mx));
+        	var j = y2j(yScale.invert(my));
+        	text=pmap[i][j].toFixed(1)+' mV';
+        	potText.style('color','red');
+        };
+
+        //horizontal profile area
+		if (mx > PD && mx < (PD+LSurf) && my > pd && my < (pd+LProf)) {
+        	var i = x2i(xScale.invert(mx));
+        	text=pmap[i][y2j(0)].toFixed(1)+' mV';
+        	potText.style('color','red');
+        };
+
+        //vertical profile area
+		if (mx > (PD+LSurf+pd) && mx < (PD+LSurf+pd+LProf) && my > (pd+LProf+pd) && my < (pd+LProf+pd+LSurf)) {
+        	var j = y2j(yScale.invert(my));
+        	text=pmap[x2i(0)][j].toFixed(1)+' mV';
+        	potText.style('color','red');
+        };
+    	
+    	potText.text(text)	
+    });
+    
+
+</script>
+</body>
+</html>
