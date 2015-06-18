@@ -5,7 +5,31 @@
 	<script src="d3/d3.min.js"></script>
 	<script src="PNGlib/PNGlib.js"></script>
 	<script src="bessel-0.2.0/bessel.js"></script>
+
+	<link href="bootstrap-tour-0.10.2/bootstrap-tour-standalone_chumo.css" rel="stylesheet">
+	<script src="jquery/jquery-1.11.3.min.js"></script>
+	<script src="bootstrap-tour-0.10.2/bootstrap-tour-standalone.js"></script>
+
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 	<style>
+		h1 {
+			margin: 0 auto;
+  			max-width: 700px;
+		}
+		
+		.helpButton {
+			margin: 5px auto;
+			width: 100px;
+			height: 25px;
+			border: 2px solid black;
+			-moz-border-radius: 12px;
+			-webkit-border-radius: 12px;
+			border-radius: 6px;
+			background: #e5caca;
+			font: 20px/25px "Helvetica";
+			cursor: pointer;
+		}
+
 		.axis path,
 		.axis line {
     		fill: none;
@@ -42,20 +66,77 @@
   			stroke-width: 1.5px;
 		}
 
-		form  { display: table; }
-		p     { display: table-row; }
-		label { display: table-cell; }
-		input { display: table-cell; }
+		.dock form { display: table; }
+		.dock p { display: table-row; max-width: 100%;}
+		.dock label { display: table-cell; }
+		.dock input { display: table-cell; }
+
+		button {font-size: 16px;
+				width: 100%;
+		}
 
 	</style>
 </head>
 <body style='text-align:center'>
-	<p align="left">chumo &copy 2015</p>
-	<h1 style='font-size:300%;font-family:Helvetica;'>Gating with atoms</h1>
-	<div align='center' style='font-size:100%;font-family:Helvetica;'>
-		Click an adsorption site (red dots) to place an atom.</br>Click an atom to remove it.</br>The charge of the atoms will modify the potential landscape.
+	<p align='left'>chumo &copy 2015</p> 
+	<h1 style='font-size:400%;font-family:Helvetica;line-height:100%;float:center;' >Gating with atoms</h1>
+	<div align='center' class='helpButton' onclick='startIntro()'>help</div>
+	<!--<div class='helpButton'><button style='width:100px;' type='button' onclick='startIntro()' >help</button></div>-->
+	<div id='dock' style="width:746px;height:70px;margin-left: auto;margin-right: auto;background:silver;border: 2px solid black;
+display:none;" >
+
+		<input type="file" id="fileElem" accept='.json' onchange="handleFiles(this.files)" style="display:none;">
+
+		<div id='dockButtons' align='center' style='float:left;font-family:Helvetica;width:20%;height:100%;'>
+			<!--<form name="dataButtons"> -->
+				<button id='loadB' type='button' onclick='loadButton()' style="height:33.333%;">LOAD json</button>
+				<button id='saveB' type='button' onclick='saveButton()' style="height:33.333%;">SAVE json</button>
+				<button id='exportB' type='button' onclick='exportButton()' style="height:33.333%;">EXPORT txt</button>
+			<!--</form> -->
+		</div>
+
+		<div id='dockLattice' align='center' style='float:left;font-size:100%;font-family:Helvetica;width:25%;height:100%;'>		
+			<strong style="font-size:20px;">Lattice:</strong>
+			<form class="dock" name="latticeInputs">
+				<p class="dock">
+					<label class="dock" align="right" for="a">a (&#8491;):</label>
+					<input class="dock" type="text" id="a" value='8.57' size="5" onchange="update_adsites(true)">
+					<label class="dock" align="right" for="alpha">&nbsp;&nbsp;&alpha; (º):</label>
+					<input class="dock" type="text" id="alpha" value='0' size="3" onchange="update_adsites(true)">
+				</p>
+				<p class="dock">
+					<label class="dock" align="right" for="b">b (&#8491;):</label>
+					<input class="dock" type="text" id="b" value='8.57' size="5" onchange="update_adsites(true)">
+					<label class="dock" align="right" for="beta">&nbsp;&nbsp;&beta; (º):</label>
+					<input class="dock" type="text" id="beta" value='60' size="3" onchange="update_adsites(true)">
+				</p>
+			</form>
+		</div>
+
+		<div id='dockParPot' align='center' style='float:left;font-size:100%;font-family:Helvetica;width:55%;height:100%;'>
+			<strong style="font-size:20px;">Parameters for atom potential:</strong>
+			<form class="dock" name="defectInputs">
+				<p class="dock">
+					<label class="dock" align="right" for="charge">charge (e):</label>
+					<input class="dock" type="text" id="charge" value='+1' size="3" onchange="recreate_pmap()">
+					&nbsp;
+					<input class="dock" type="text" id="kappa" value='8.075' size="5" onchange="recreate_pmap()">					
+					<label class="dock" align="left" for="kappa">:dielectric constant</label>
+				</p>
+				<p class="dock">
+					<label class="dock" align="right" for="tsd">&nbsp;&nbsp;tip-surface distance (&#8491;):</label>
+					<input class="dock" type="text" id="tsd" value='5' size="3" onchange="recreate_pmap()">
+					&nbsp;
+					<input class="dock" type="text" id="redmass" value='0.043' size="5" onchange="recreate_pmap()">					
+					<label class="dock" align="left" for="redmass">:reduced mass</label>
+				</p>
+			</form>
+		</div>
+
 	</div>
-	
+
+	<div id='viz'></div> 
+
 	<script type="text/javascript">
 
 	var w = 750;
@@ -78,10 +159,14 @@
 	var Radatom = 8;
 
 	var numAdatoms = 0;
-		//Here is an alternative way of counting the number of Adatoms, that work only if circles have been created: 
-		//	var numAdatoms = d3.range(circles[0].length).filter(function(i){return circles[0][i].attributes.class.value=='adatom';}).length;
+	var atomLocs = []; //array of indexes where adatoms are located
 
-	var svg = d3.select("body").append("svg").attr("width", w).attr("height", h).style('background','WhiteSmoke');
+	var svg = d3.select("#viz").append("svg").attr('id','svg').attr("width", w).attr("height", h).style('background','WhiteSmoke');
+
+	//dock
+	var dock = d3.select('#dock');
+
+	var toggleDockBar = svg.append('rect').attr('id','toggleDockBar').attr('width',w).attr('height',pd).style('opacity','0');
 
 	//scales
 	var xScale = d3.scale.linear()
@@ -140,7 +225,7 @@
     	.attr("transform", "translate(" + PD + "," + 0 + ")")
     	.call(yprofAxis);
 
-    //add text label fo the axis
+    //add text label for the axis
     svg.append('text') //xAxis
     	.attr('class','axisLabel')
     	.attr('x',PD+LSurf/2)
@@ -175,32 +260,171 @@
 		Hprofile = svg.append("path");
 		Vprofile = svg.append("path");
 
-    //add input panel
-    svg
-		.append('foreignObject')
-		.attr('id','inputPanel')
-		.style('background','silver')
-		.attr('x',PD + LSurf)
-		.attr('y',0)
-		.attr('width', w-PD-LSurf)
-		.attr('height', LProf+pd+pd)
-		.html('<div align="center" id="inputs" style="font-family:Palatino; font-size:18;"></div>');
+    //add info panel
+    infoPanel = svg.append('g').attr('id','infoPanel').attr('transform','translate('+(PD + LSurf)+',1)');
 
-	var inputsString = [
-			'</br>',
-			'<strong style="font-size:20px;">Lattice:</strong>',
-			'<form name="inputForm">',
-			'<p><label align="right" for="a">a (&#8491;):</label><input type="text" id="a" value=8.57 size="5" onchange="update_adsites()">',
-			'<label align="right" for="alpha">&nbsp;&nbsp;&alpha; (º):</label><input type="text" id="alpha" value=0 size="3" onchange="update_adsites()"></p>',
-			'<p><label align="right" for="b">b (&#8491;):</label><input type="text" id="b" value=8.57 size="5" onchange="update_adsites()">',
-			'<label align="right" for="beta">&nbsp;&nbsp;&beta; (º):</label><input type="text" id="beta" value=60 size="3" onchange="update_adsites()"></p></br>',
-			'</form>',
-			'<strong style="font-size:20px;">Potential:</strong>',
-			'<p id="potText" style="font-size:20px;">Hover on graphs.</p>'
-   		].join('\n');
+    infoPanel
+		.append('rect')
+		.attr('id','potRect')
+		.style('fill','white')
+		.style('stroke-width','1px')
+		.style('stroke','black')
+		.attr('width', w-PD-LSurf -1)
+		.attr('height', LProf+pd+pd -1);
 
-	var inputs = d3.select('div#inputs');
-	inputs.html(inputsString);
+	infoPanel
+		.append('text')
+		.attr('id','potTitle')
+		.style('font-family','Impact')
+		.style('font-size','30px')
+		.style('text-anchor','middle')
+		.attr('x', (w-PD-LSurf -1)/2)
+		.attr('y', 3*pd)
+		.text('Potential:');
+
+	potText = infoPanel
+		.append('text')
+		.attr('id','potText')
+		.style('font-family','Helvetica')
+		.style('font-size','30px')
+		.style('text-anchor','middle')
+		.attr('x', (w-PD-LSurf -1)/2)
+		.attr('y', 5*pd)
+		.text('in mV');
+
+	//button procedures
+	function saveButton(){// generates and downloads a json file with the relevant data to be able to reproduce the figure
+		var lattice = {
+					a : eval(latticeInputs.a.value),
+					alpha : eval(latticeInputs.alpha.value),
+					b : eval(latticeInputs.b.value),
+					beta : eval(latticeInputs.beta.value)
+					};
+
+		var potpars = {
+					charge : eval(defectInputs.charge.value),
+					tsd : eval(defectInputs.tsd.value),
+					kappa : eval(defectInputs.kappa.value),
+					redmass : eval(defectInputs.redmass.value)
+					};
+
+		atomLocs = d3.range(circles[0].length).filter(function(i){return circles[0][i].attributes.class.value=='adatom';});
+
+		var data = {'limits': lim,
+					'lattice': lattice,
+					'potentialParameters': potpars,
+					'atomLocations': atomLocs,
+					'potentialMap': pmap};
+
+		var json = JSON.stringify(data);
+		var blob = new Blob([json], {type: "application/json"});
+		
+		if (navigator.msSaveBlob) { // IE 10+
+            navigator.msSaveBlob(blob, 'potential.json');
+        } else {
+            var a = document.createElement("a");
+            if (a.download !== undefined) { // feature detection
+                // Browsers that support HTML5 download attribute
+                var url = URL.createObjectURL(blob);
+
+                a.setAttribute("href", url);
+                a.setAttribute("download", 'potential.json');
+                a.style.visibility = 'hidden';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+        };
+
+	};
+
+	function loadButton(){// loads a json file generated by this webapp and recreates the map
+    	document.getElementById('fileElem').click();    	
+    };
+
+    function handleFiles(files){
+    // this function is inspired by http://stackoverflow.com/a/21446426/4564295
+
+		if (typeof window.FileReader !== 'function') {
+      		alert("The file API isn't supported on this browser yet.");
+      		return;
+    	}
+
+		var file = files[0];
+    	
+    	if (file){ //a file has been selected and 'cancel' button was not pressed
+    		var fr = new FileReader();
+			fr.onload = receivedText;
+			fr.readAsText(file);
+    	};
+		
+    	function receivedText(ev) {
+      		var text = ev.target.result;
+      		var json = JSON.parse(text);
+   		
+      		//parse json contents
+      		lim = json['limits'];
+			pmap = json['potentialMap'];
+
+			var lattice = json['lattice'];
+				latticeInputs.a.value = lattice['a'];
+				latticeInputs.b.value = lattice['b'];
+				latticeInputs.alpha.value = lattice['alpha'];
+				latticeInputs.beta.value = lattice['beta'];
+
+			var potpars = json['potentialParameters'];
+				defectInputs.charge.value = potpars['charge'];
+				defectInputs.tsd.value = potpars['tsd'];
+				defectInputs.kappa.value = potpars['kappa'];
+				defectInputs.redmass.value = potpars['redmass'];
+
+			atomLocs = json['atomLocations'];
+			numAdatoms = atomLocs.length;
+
+			//recreate full App
+			update_adsites(false);
+			recreate_pmap();
+			
+    	}
+
+	};
+
+	function exportButton(){ // export a txt file only with the matrix of potential values
+		// this function is inspired by http://stackoverflow.com/a/24922761/4564295
+
+		var processRow = function (row) {
+            var finalVal = String(row[0]);
+            for (var j = 1; j < row.length; j++) {
+                finalVal += ','+String(row[j]);
+            }
+            return finalVal + '\n';
+        };
+
+		var csvFile = '';
+        for (var i = 0; i < pmap.length; i++) {
+            csvFile += processRow(pmap[i]);
+        }
+
+		var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
+
+		if (navigator.msSaveBlob) { // IE 10+
+            navigator.msSaveBlob(blob, 'potential.txt');
+        } else {
+            var a = document.createElement("a");
+            if (a.download !== undefined) { // feature detection
+                // Browsers that support HTML5 download attribute
+                var url = URL.createObjectURL(blob);
+
+                a.setAttribute("href", url);
+                a.setAttribute("download", 'potential.txt');
+                a.style.visibility = 'hidden';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+        };
+
+	};
 
     //some functions
     
@@ -283,7 +507,30 @@
         return f.orde(R);
 	};
 
-	var CD = new Charged_Defect(1., 5., 8.075, 0.043, 2.);
+	function recreate_pmap(){
+		var charge = eval(defectInputs.charge.value); 
+		var tsd = eval(defectInputs.tsd.value); 
+		var kappa = eval(defectInputs.kappa.value);
+		var redmass = eval(defectInputs.redmass.value);
+
+		//create charge defect instance
+		CD = new Charged_Defect(charge,tsd,kappa,redmass,2);
+
+		//resets pmap to zeros
+		Gen_pmap(); 
+
+		//place a defect at every location
+		
+		atomLocs = d3.range(circles[0].length).filter(function(i){return circles[0][i].attributes.class.value=='adatom';});
+		
+		for (var i = 0; i < atomLocs.length; i++) {
+			var coord = {x:adsites[atomLocs[i]][0] , y:adsites[atomLocs[i]][1]};
+			update_pmap(coord,true);
+		};
+
+		//build and display pmap image
+  		surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+	};
 
     ////////////////////////
 
@@ -373,10 +620,12 @@
 		disp_yprofAxis.transition().call(yprofAxis);
 
   		var Hline = d3.svg.line()
+  			.interpolate('basis')
   			.x(function(d) { return xScale(d[0]); })
     		.y(function(d) { return yprofScale(d[1]); });
 
     	var Vline = d3.svg.line()
+    		.interpolate('basis')
   			.y(function(d) { return yScale(d[0]); })
     		.x(function(d) { return xprofScale(d[1]); });
 
@@ -428,14 +677,13 @@
   		.attr('y2',yScale(lim.ymax))
   		.style('stroke','silver')
   		.style('stroke-width','2');
-  		  		
 
     //meshgrid of adsorption sites
     function Gen_adsites(){
-    	var a = eval(inputForm.a.value); // Size of the first unit vector
-		var b = eval(inputForm.b.value); // Size of the second unit vector
-		var alpha = eval(inputForm.alpha.value); // Angle of the first unit vector in degrees
-		var beta = eval(inputForm.beta.value); // Angle of the second unit vector in degrees
+    	var a = eval(latticeInputs.a.value); // Size of the first unit vector
+		var b = eval(latticeInputs.b.value); // Size of the second unit vector
+		var alpha = eval(latticeInputs.alpha.value); // Angle of the first unit vector in degrees
+		var beta = eval(latticeInputs.beta.value); // Angle of the second unit vector in degrees
 		alpha *= Math.PI / 180;
 		beta *= Math.PI / 180;
 
@@ -450,11 +698,14 @@
     };
 
 	//add circles at adsorption sites	
-	function update_adsites(){
-		numAdatoms = 0;
-
-		Gen_pmap(); //resets pmap to zeros
-		surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+	function update_adsites(reset){
+		
+		if (reset) { //the adatoms from the map should be eliminated (for example, when the lattice is updated)
+			numAdatoms = 0;
+			atomLocs = [];
+			Gen_pmap(); //resets pmap to zeros
+			surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+		};
 
 		Gen_adsites(); //generate adsites data set
 		
@@ -463,8 +714,12 @@
 
 		//update
 		circles
-			.attr('class','vacancy')
-			.attr('r',Rvacancy)
+			//.attr('class','vacancy')
+			//.attr('r',Rvacancy)
+			.attr('class',function(d,i){
+				return (atomLocs.indexOf(i) > -1 ) ? 'adatom' : 'vacancy';})
+			.attr('r',function(d,i){
+				return (atomLocs.indexOf(i) > -1 ) ? Radatom : Rvacancy;})
 			.transition()
 			.attr('cx',function(d){return xScale(d[0])})
     		.attr('cy',function(d){return yScale(d[1])});
@@ -473,8 +728,12 @@
     	circles
     		.enter()
     		.append('circle')
-    		.attr('class','vacancy')
-    		.attr('r',Rvacancy)
+    		//.attr('class','vacancy')
+    		//.attr('r',Rvacancy)
+    		.attr('class',function(d,i){
+				return (atomLocs.indexOf(i) > -1 ) ? 'adatom' : 'vacancy';})
+			.attr('r',function(d,i){
+				return (atomLocs.indexOf(i) > -1 ) ? Radatom : Rvacancy;})
     		.transition()
     		.attr('cx',function(d){return xScale(d[0])})
     		.attr('cy',function(d){return yScale(d[1])});
@@ -484,68 +743,194 @@
     		.exit()
     		.remove();
 
+    	//update potential image when the set of adatoms is modified
+    	circles.on('click',function(){
+    		var mycircle = d3.select(this);
+    		var cls = mycircle.attr('class');
+    		var x = xScale.invert(mycircle.attr('cx'));
+	    	var y = yScale.invert(mycircle.attr('cy'));
+    	
+    		var coord = {x:x, y:y};
+    
+    		if (cls == 'adatom') {
+    			numAdatoms -= 1;
+    			mycircle.attr('r',Rvacancy).attr('class','vacancy');
+    			update_pmap(coord,false);
+    		} else {
+    			numAdatoms += 1;
+    			mycircle.attr('r',Radatom).attr('class','adatom');
+    			update_pmap(coord,true);
+    		};
+
+    		surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
+
+    	});
+
 	};
 
 	//update adsites positions with the adsites dataset default values
-	update_adsites();
+	update_adsites(true);
 
-	//update potential image when the set of adatoms is modified
-    circles.on('click',function(){
-    	var mycircle = d3.select(this);
-    	var cls = mycircle.attr('class');
-    	var x = xScale.invert(mycircle.attr('cx'));
-    	var y = yScale.invert(mycircle.attr('cy'));
-    	
-    	var coord = {x:x, y:y};
-    
-    	if (cls == 'adatom') {
-    		numAdatoms -= 1;
-    		mycircle.attr('r',Rvacancy).attr('class','vacancy');
-    		update_pmap(coord,false);
-    	} else {
-    		numAdatoms += 1;
-    		mycircle.attr('r',Radatom).attr('class','adatom');
-    		update_pmap(coord,true);
-    	};
-
-    	surfImage.attr('xlink:href','data:image/png;base64,' + arr2png(pmap));
-
-    });
+	//create pmap
+	recreate_pmap()
 
     //mouse event to display potential value
     svg.on('mousemove',function(){
     	var mx= d3.mouse(this)[0];
         var my= d3.mouse(this)[1];
 
-        var potText = d3.select('p#potText').style('color','black');
-        var text = 'Hover on graphs.';
+        var potText = d3.select('#potText').style('fill','black');
+        var text = 'in mV';
 
         //surface area
         if (mx > PD && mx < (PD+LSurf) && my > (pd+LProf+pd) && my < (pd+LProf+pd+LSurf)) {
         	var i = x2i(xScale.invert(mx));
         	var j = y2j(yScale.invert(my));
         	text=pmap[i][j].toFixed(1)+' mV';
-        	potText.style('color','red');
+        	potText.style('fill','red');
         };
 
         //horizontal profile area
 		if (mx > PD && mx < (PD+LSurf) && my > pd && my < (pd+LProf)) {
         	var i = x2i(xScale.invert(mx));
         	text=pmap[i][y2j(0)].toFixed(1)+' mV';
-        	potText.style('color','red');
+        	potText.style('fill','red');
         };
 
         //vertical profile area
 		if (mx > (PD+LSurf+pd) && mx < (PD+LSurf+pd+LProf) && my > (pd+LProf+pd) && my < (pd+LProf+pd+LSurf)) {
         	var j = y2j(yScale.invert(my));
         	text=pmap[x2i(0)][j].toFixed(1)+' mV';
-        	potText.style('color','red');
+        	potText.style('fill','red');
         };
     	
     	potText.text(text)	
+
     });
     
+    //toggle dock
+	$("#toggleDockBar").on('mouseenter',function(){
+    	$("#dock").slideDown(100);
+	});
+
+	$("#toggleDockBar").on('mouseleave',function(){
+    	$("#toggleDockBar").on('mouseenter',function(){
+    		$("#dock").slideDown(100);
+		});
+	});
+
+	$("#dock").on('mousemove',function(){
+    	$("#dock").slideDown(100);
+	});
+
+	$("#dock").on('mouseleave',function(){
+    	$("#dock").slideUp(100);
+    	$("#toggleDockBar").off('mouseenter');
+	});
+
 
 </script>
+
+	<!-- BOOTSTRAP TOUR THROUGH THE APP -->
+	<script type="text/javascript"> 
+      	// Instance the tour
+		var tour = new Tour({
+		onEnd: function(){$("#dock").slideUp();},
+  		steps: [
+  		{
+  			orphan: true,
+  			title: "Welcome!",
+    		content: "<div style='width:300px;'><p>With this app you can engineer a two dimensional electrostatic potential by depositing charged atoms on a surface.</p> \
+    		<p>Use the arrow keys or the buttons below to walk through this tour.</p></div>"
+  		},
+  		{
+    		onShow: function(){$("#dock").slideDown();},
+    		onNext: function(){$("#dock").slideUp(10);},
+    		element: '#viz',
+    		title: "Visualization",
+    		content: "<div style='width:650px;'>Deposit an atom at any of the red dots below by simply clicking on them. Try now!</br> \
+    			Click again on the deposited atom to remove it.</br> \
+    			The resulting potential at the position of the mouse pointer is shown in the top-right panel.</br> \
+    			The blue curves show the potential profile accross the white straight lines (horizontal and vertical).</br></div>",
+    		placement: 'top'
+    	},
+  		{
+  			onShow: function(){$("#dock").slideDown();},
+    		element: "#dock",
+    		title: "Toggle the dock...",
+    		content: "...by hovering the mouse over the top part of the graph.",
+    		placement: 'bottom'
+  		},
+		
+  		{
+    		element: "#dockButtons",
+    		title: "File",
+    		content: "<div style='width:425px;'>Use these buttons to...</br> \
+    			<ul> \
+    				<li><strong>LOAD</strong> from disk a previously generated potential,</li> \
+    				<li><strong>SAVE</strong> to disk the current potential,</li> \
+    				<li><strong>EXPORT</strong> the current potential map as a raw ASCII matrix.</li> \
+    			</ul> \
+    			The json format is used to load from and save to the disk.</div>",
+    		placement: 'bottom'
+   		},
+   		{
+    		element: "#dockLattice",
+    		title: "Lattice",
+    		content: "<div style='width:425px;'>Set the lattice of adsorption sites (red dots) by defining the length and angle of the base vectors. The following diagram shows the convention:</br> \
+    				<div style='text-align:center;'> \
+    					<img src='images/lattice.png' alt='Lattice base vectors' width='150'> \
+    				</div>By setting any of these four parameters, your potential matrix will be reset to zero. Please, save your potential before if you want to keep it.</div>",
+    		placement: 'bottom'
+   		},
+   		{
+    		element: "#dockParPot",
+    		title: "Calculation Parameters",
+    		content: "<div style='width:425px;'>The electrostatic potential provided by each charged atom is computed according to Appendix B of <a href='http://dx.doi.org/10.1103/PhysRev.163.816' target='_blank'>Phys. Rev. 163, 816-835 (1967)</a>. The calculation assumes a point charge screened by a 2D electron gas. \
+				<ul> \
+    				<li><strong>charge</strong> is the charge of the atom (in units of the absolute electron charge).</li> \
+    				<li><strong>dielectric constant</strong> is the average static dielectric constant of the surface material.</li> \
+    				<li><strong>tip-surface distance</strong> is the distance between the surface and the measuring plane.</li> \
+    				<li><strong>reduced mass</strong> is the effective mass of the electrons at the surface electron gas.</li> \
+    			</ul></div>",
+    		placement: 'bottom',
+    		onNext: function(){$("#dock").slideUp();},
+   		},
+   		/*{
+    		orphan: true,
+  			title: "For more info...",
+    		content: "<div style='width:300px;'>This app has been used to engineer the nanostructures shown in <a href='http://dx.doi.org/10.1038/nphys3385' target='_blank'>Nature Physics xx, xxx-xxx (2015)</a>. By means of atom manipulation with a scanning tunneling microscope (STM), a series of indium atoms were deposited individually over an indium arsenide surface. The resulting potential was used to gate a single phthalocyanine molecule, which acts as a single electron transitor.</div>"
+    	}*/
+    	{
+    		orphan: true,
+  			title: "Have fun!",
+    		content: "<div style='width:300px;'>If you have any question or comment contact me through my <a href='https://github.com/chumo' target='_blank'>GitHub</a> account. Pull requests are accepted!</div>"
+    	}
+   		],
+  		backdrop: true,
+  		template: "<div class='popover tour'> \
+    				<div class='arrow'></div> \
+    				<h3 class='popover-title'></h3> \
+    				<div class='popover-content'></div> \
+    					<nav class='popover-navigation'> \
+        					<div class='btn-group'> \
+            					<button class='btn btn-default' data-role='prev'><</button> \
+            					<button class='btn btn-default' data-role='end'>&times;</button> \
+            					<button class='btn btn-default' data-role='next'>></button> \
+        					</div> \
+    					</nav> \
+    				</div>" 
+		});	
+
+      	// Initialize the tour
+		tour.init();
+
+      	function startIntro(){
+			// Start the tour
+			//tour.start(true);
+			tour.restart();
+      	};
+    </script>
+
 </body>
 </html>

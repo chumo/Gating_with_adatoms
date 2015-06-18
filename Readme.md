@@ -32,7 +32,8 @@ This is a web-app where the interactivity has been implemented using the javascr
 
 In this version it is possible to define a lattice of adsorption sites (two vectors, each with modulus and angle).
 
-A copy of two javascript libraries are used and included, namely [PNGlib.js](http://www.xarg.org/2010/03/generate-client-side-png-files-using-javascript/) and [Bessel.JS](https://github.com/SheetJS/bessel).
+Apart from [d3.js](http://d3js.org/), a copy of two javascript libraries are included and used, namely [PNGlib.js](http://www.xarg.org/2010/03/generate-client-side-png-files-using-javascript/) and [Bessel.JS](https://github.com/SheetJS/bessel). A guided tour through the app is also implemented, for which [jQuery.js](https://jquery.com/) and [Bootstrap-tour.js](http://bootstraptour.com/) are used.
 
 Enjoy!
+
 Jesús Martínez-Blanco

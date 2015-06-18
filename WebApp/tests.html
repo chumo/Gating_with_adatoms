@@ -1,16 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Gating with adatoms</title>
 	<script src="d3/d3.min.js"></script>
-	<script src="bessel/bessel.js"></script>
 
+	<link href="bootstrap-tour-0.10.2/bootstrap-tour-standalone_chumo.css" rel="stylesheet">
+	<script src="jquery/jquery-1.11.3.min.js"></script>
+	<script src="bootstrap-tour-0.10.2/bootstrap-tour-standalone.js"></script>
 </head>
 <body style='text-align:center'>
-	<p align="left">chumo &copy 2015</p>
-	<h1 style='font-size:300%;font-family:Helvetica;'>Gating with adatoms</h1>
-	
-	<script type="text/javascript">
+
+<div id='todo'>
+<svg id='todosvg' width='300px' height='300px' style='background:yellow;'>
+	<circle id='mycircle' r=20 cx=100 cy=100 style='fill:blue;'>
+</svg>
+</div>
+
+<script type="text/javascript"> 
+      	// Instance the tour
+		var tour = new Tour({
+  		steps: [
+  		
+   		{
+    		element: '#todo',
+    		title: "Local Potential",
+    		content: "Here is the value of the potential at the position of the mouse pointer.",
+    		placement: 'left',
+    		container: '#todo'
+    		//onShown: function() {
+    		//	$(".tour-backdrop").appendTo("#mycircle");
+    		//	$(".tour-step-background").appendTo("#mycircle");
+    		//	$(".tour-step-background").css("left", "0px");
+			//}
+    	}
+
+   		],
+  		backdrop: true,
+  		 template: "<div class='popover tour'> \
+    				<div class='arrow'></div> \
+    				<h3 class='popover-title'></h3> \
+    				<div class='popover-content'></div> \
+    					<nav class='popover-navigation'> \
+        					<div class='btn-group'> \
+            					<button class='btn btn-default' data-role='prev'><</button> \
+            					<button class='btn btn-default' data-role='end'>&times;</button> \
+            					<button class='btn btn-default' data-role='next'>></button> \
+        					</div> \
+    					</nav> \
+    				</div>" 
+		});	
+
+      	// Initialize the tour
+		tour.init();
+
+      	function startIntro(){
+			// Start the tour
+			//tour.start(true);
+			tour.restart();
+      	};
+    </script>
+
 
 </body>
 </html>
