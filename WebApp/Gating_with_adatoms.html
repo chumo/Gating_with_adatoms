@@ -3,7 +3,7 @@
 <head>
 	<title>Gating with atoms</title>
 	<script src="d3/d3.min.js"></script>
-	<script src="PNGlib/PNGlib.js"></script>
+	<script src="pnglib/pnglib.js"></script>
 	<script src="bessel-0.2.0/bessel.js"></script>
 
 	<link href="bootstrap-tour-0.10.2/bootstrap-tour-standalone_chumo.css" rel="stylesheet">
@@ -433,7 +433,7 @@ display:none;" >
   		return d3.range(nsteps).map(function(i){return start+i*delta;});
 	};
 
-	function trapz(vecX,vecY){
+	function trapz(vecX,vecY){//integrates a curve using the trapezoidal method.
 		var np = vecY.length;
 
 		var sums = d3.range(np-1).map(function(i){return 0.5 * (vecY[i+1]+vecY[i]) * Math.abs(vecX[i+1]-vecX[i]);}); 
@@ -896,11 +896,6 @@ display:none;" >
     		placement: 'bottom',
     		onNext: function(){$("#dock").slideUp();},
    		},
-   		/*{
-    		orphan: true,
-  			title: "For more info...",
-    		content: "<div style='width:300px;'>This app has been used to engineer the nanostructures shown in <a href='http://dx.doi.org/10.1038/nphys3385' target='_blank'>Nature Physics xx, xxx-xxx (2015)</a>. By means of atom manipulation with a scanning tunneling microscope (STM), a series of indium atoms were deposited individually over an indium arsenide surface. The resulting potential was used to gate a single phthalocyanine molecule, which acts as a single electron transitor.</div>"
-    	}*/
     	{
     		orphan: true,
   			title: "Have fun!",
